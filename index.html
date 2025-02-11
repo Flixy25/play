@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductor de Video Personalizado</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            background-color: #181818;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .player-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 16 / 9;
+            background: black;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 5%;
+            width: 88%;
+            display: flex;
+            align-items: center;
+            padding: 1px;
+            border-radius: 10px;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .btn {
+            background: linear-gradient(to right, red, orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .progress-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            margin: 0 10px;
+            margin-left: 15px;
+        }
+
+        .progress-bar {
+            flex-grow: 1;
+            height: 5px;
+            background: linear-gradient(#4a0000, #8b2e00);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress {
+            width: 0;
+            height: 100%;
+            background: linear-gradient(to right, red, orange);
+        }
+
+        .time {
+            font-size: 14px;
+            margin-left: 15px;
+            min-width: 50px;
+            background: linear-gradient(to right, red, orange);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(to right, red, orange);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 40px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+        <video id="video" poster="http" preload="metadata">
+            Tu navegador no soporta la reproducción de video.
+        </video>
+
+        <button id="playCenter" class="play-btn"><i class="fas fa-play"></i></button>
+
+        <div class="controls" id="controls">
+            <button id="playPause" class="btn"><i class="fas fa-play"></i></button>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <span id="timeDisplay" class="time">0:00</span>
+                <button id="volumeBtn" class="btn"><i class="fas fa-volume-up"></i></button>
+            </div>
+            <button id="fullscreen" class="btn"><i class="fas fa-expand"></i></button>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById("video");
+        const playPause = document.getElementById("playPause");
+        const playCenter = document.getElementById("playCenter");
+        const progressBar = document.getElementById("progressBar");
+        const progress = document.getElementById("progress");
+        const fullscreen = document.getElementById("fullscreen");
+        const timeDisplay = document.getElementById("timeDisplay");
+        const volumeBtn = document.getElementById("volumeBtn");
+        const controls = document.getElementById("controls");
+
+        let hideControlsTimeout;
+
+        function togglePlay() {
+            if (video.paused) {
+                video.play();
+                playPause.innerHTML = '<i class="fas fa-pause"></i>';
+                playCenter.innerHTML = '<i class="fas fa-pause"></i>';
+                hideControlsAfterDelay();
+            } else {
+                video.pause();
+                playPause.innerHTML = '<i class="fas fa-play"></i>';
+                playCenter.innerHTML = '<i class="fas fa-play"></i>';
+                showControls();
+            }
+        }
+
+        playPause.addEventListener("click", togglePlay);
+        playCenter.addEventListener("click", togglePlay);
+
+        video.addEventListener("timeupdate", () => {
+            const percentage = (video.currentTime / video.duration) * 100;
+            progress.style.width = percentage + "%";
+            timeDisplay.textContent = formatTime(video.currentTime);
+        });
+
+        progressBar.addEventListener("click", (e) => {
+            const newTime = (e.offsetX / progressBar.offsetWidth) * video.duration;
+            video.currentTime = newTime;
+        });
+
+        fullscreen.addEventListener("click", () => {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            }
+        });
+
+        volumeBtn.addEventListener("click", () => {
+            if (video.muted) {
+                video.muted = false;
+                volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            } else {
+                video.muted = true;
+                volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            }
+        });
+
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = Math.floor(seconds % 60);
+            return `${min}:${sec < 10 ? "0" : ""}${sec}`;
+        }
+
+        function showControls() {
+            controls.classList.remove("hidden");
+            playCenter.classList.remove("hidden");
+            clearTimeout(hideControlsTimeout);
+            if (!video.paused) {
+                hideControlsAfterDelay();
+            }
+        }
+
+        function hideControlsAfterDelay() {
+            hideControlsTimeout = setTimeout(() => {
+                if (!video.paused) {
+                    controls.classList.add("hidden");
+                    playCenter.classList.add("hidden");
+                }
+            }, 5000);
+        }
+
+        video.addEventListener("play", hideControlsAfterDelay);
+        video.addEventListener("mousemove", showControls);
+        video.addEventListener("touchstart", showControls);
+
+        // Función para obtener parámetros de la URL
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        // Verifica si hay un video en la URL y lo carga automáticamente
+        const videoURL = getQueryParam("video");
+
+        if (videoURL) {
+            video.src = videoURL;
+            video.load();  
+            video.play();
+        }
+    </script>
+
+</body>
+</html>
